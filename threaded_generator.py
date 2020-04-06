@@ -24,27 +24,31 @@ def do_func(i):
 
 def queued_generator(g, maxsize=2):
     """Transform a generator in a threaded generator."""
-    q = mp.Queue(maxsize=maxsize)
+    import multiprocessing as mp
+
+    q: mp.Queue[Type] = mp.Queue(maxsize=maxsize)
 
     def put_data_in_queue(q, g):
-        for d in g:
-            q.put(d)
-        q.put('DONE')
+        try:
+            for d in g:
+                q.put(d)
+        except Exception as _:
+            import traceback
+            traceback.print_exc()
+            print("Error in the generator")
+        q.put("DONE")
 
-    reader_p = mp.Process(
-        target=put_data_in_queue, args=(
-            q,
-            g,
-        ))
-    reader_p.daemon = True
+    reader_p = mp.Process(target=put_data_in_queue, args=(q, g))
+    #     reader_p.daemon = True
     reader_p.start()  # Launch reader_proc() as a separate python process
 
     while True:
         el = q.get()
-        if el == 'DONE':
+        if el == "DONE":
             return
         else:
             yield el
+
 
 
 if __name__ == "__main__":
